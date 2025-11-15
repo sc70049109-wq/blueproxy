@@ -1,87 +1,98 @@
-import React, { useState, useRef } from "react";
-
-const PROXY_BASE = "http://localhost:8080/proxy?url=";
+import React, { useEffect, useRef } from "react";
+import Particles from "react-tsparticles";
+import { loadFull } from "tsparticles";
 
 export default function App() {
-  const [inputUrl, setInputUrl] = useState("");
-  const [proxiedUrl, setProxiedUrl] = useState("");
-  const iframeRef = useRef();
+  const videoRef = useRef(null);
+  let pc;
+  let ws;
 
-  const go = (raw) => {
-    let url = raw.trim();
-    if (!/^https?:\/\//i.test(url)) {
-      // If not a URL, search DuckDuckGo
-      url = `https://duckduckgo.com/?q=${encodeURIComponent(raw)}`;
-    }
-    setProxiedUrl(PROXY_BASE + encodeURIComponent(url));
-  };
+  useEffect(() => {
+    ws = new WebSocket("ws://localhost:3000");
 
-  const goBack = () => {
-    if (iframeRef.current) {
-      iframeRef.current.contentWindow.history.back();
+    pc = new RTCPeerConnection();
+
+    pc.ontrack = (event) => {
+      videoRef.current.srcObject = event.streams[0];
+    };
+
+    ws.onmessage = async (msg) => {
+      const data = JSON.parse(msg.data);
+      if (data.type === "answer") {
+        await pc.setRemoteDescription(data.answer);
+      }
+    };
+
+    async function initWebRTC() {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      ws.send(JSON.stringify({ type: "offer", offer }));
     }
-  };
-  const goForward = () => {
-    if (iframeRef.current) {
-      iframeRef.current.contentWindow.history.forward();
-    }
-  };
-  const refresh = () => {
-    if (iframeRef.current) {
-      iframeRef.current.src = proxiedUrl;
-    }
+
+    initWebRTC();
+  }, []);
+
+  const particlesInit = async (main) => {
+    await loadFull(main);
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-blue-100">
-      {!proxiedUrl && (
-        <div className="flex-grow flex flex-col justify-center items-center">
-          <h1 className="text-5xl font-bold text-blue-800 mb-6">Blue Proxy</h1>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              go(inputUrl);
-            }}
-            className="flex w-full max-w-lg"
-          >
-            <input
-              type="text"
-              placeholder="Search DuckDuckGo or input a URL"
-              value={inputUrl}
-              onChange={(e) => setInputUrl(e.target.value)}
-              className="flex-1 p-3 rounded-l-lg border border-blue-300"
-            />
-            <button
-              type="submit"
-              className="px-4 bg-blue-500 text-white rounded-r-lg"
-            >
-              Go
-            </button>
-          </form>
-        </div>
-      )}
+    <div
+      style={{
+        height: "100vh",
+        background: "linear-gradient(135deg, #1a1a1a, #0d0d0d)",
+        color: "white",
+        overflow: "hidden",
+      }}
+    >
+      {/* Particles */}
+      <Particles
+        id="tsparticles"
+        init={particlesInit}
+        options={{
+          background: { color: { value: "transparent" } },
+          fpsLimit: 60,
+          particles: {
+            color: { value: "#ffffff" },
+            links: { enable: true, color: "#ffffff" },
+            move: { enable: true, speed: 2 },
+            number: { value: 50 },
+            size: { value: 3 },
+          },
+        }}
+      />
 
-      {proxiedUrl && (
-        <>
-          <div className="p-2 bg-blue-200 flex items-center space-x-2">
-            <button onClick={goBack} className="px-2">◀</button>
-            <button onClick={goForward} className="px-2">▶</button>
-            <button onClick={refresh} className="px-2">⟳</button>
-            <input
-              type="text"
-              value={proxiedUrl.replace(PROXY_BASE, "")}
-              readOnly
-              className="flex-1 p-1 border rounded text-sm"
-            />
-          </div>
-          <iframe
-            ref={iframeRef}
-            src={proxiedUrl}
-            className="flex-1 w-full border-none"
-            title="BlueProxy"
-          />
-        </>
-      )}
+      {/* Header */}
+      <h1 style={{ textAlign: "center", paddingTop: "20px" }}>🌐 BlueProxy WebRTC</h1>
+
+      {/* Video Stream */}
+      <div style={{ display: "flex", justifyContent: "center", marginTop: "50px" }}>
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          style={{
+            width: "80%",
+            borderRadius: "20px",
+            boxShadow: "0 0 20px rgba(0,0,0,0.5)",
+          }}
+        />
+      </div>
+
+      {/* Cards / Images Example */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          flexWrap: "wrap",
+          marginTop: "50px",
+          gap: "20px",
+        }}
+      >
+        <div style={{ width: "150px", height: "150px", background: "#333", borderRadius: "15px" }}></div>
+        <div style={{ width: "150px", height: "150px", background: "#444", borderRadius: "15px" }}></div>
+        <div style={{ width: "150px", height: "150px", background: "#555", borderRadius: "15px" }}></div>
+      </div>
     </div>
   );
 }
