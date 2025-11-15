@@ -1,87 +1,32 @@
 // backend/server.js
 import express from "express";
-import fetch from "node-fetch";
-import { load } from "cheerio"; // Fixed Cheerio import
+import { createProxyMiddleware } from "http-proxy-middleware";
+import cors from "cors";
 
 const app = express();
 const PORT = 8080;
 
-// Helper: encode and decode URLs
-const decodeBase64Url = (b64) => Buffer.from(b64, "base64").toString("utf-8");
-const encodeBase64Url = (url) => Buffer.from(url, "utf-8").toString("base64");
+// Enable CORS if needed
+app.use(cors());
 
-// Middleware: serve all proxied content
-app.get("/r/:b64(*)", async (req, res) => {
-  try {
-    const targetUrl = decodeBase64Url(req.params.b64);
-    const targetResponse = await fetch(targetUrl, {
-      headers: { "User-Agent": req.get("User-Agent") || "BlueProxy" },
-      redirect: "manual", // handle redirects manually
-    });
+// Simple API to encode URL
+app.get("/proxy", (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).send("Missing 'url' query param");
+  res.redirect(`/r/${encodeURIComponent(url)}`);
+});
 
-    // Handle redirects
-    if (targetResponse.status >= 300 && targetResponse.status < 400) {
-      const location = targetResponse.headers.get("location");
-      if (location) {
-        const absoluteLocation = new URL(location, targetUrl).href;
-        return res.redirect(`/r/${encodeBase64Url(absoluteLocation)}`);
-      }
-    }
+// Proxy route
+app.use("/r/:url(*)", (req, res, next) => {
+  const targetUrl = decodeURIComponent(req.params.url);
 
-    const contentType = targetResponse.headers.get("content-type") || "";
-
-    // HTML content: rewrite links/forms/iframes
-    if (contentType.includes("text/html")) {
-      let html = await targetResponse.text();
-      const $ = load(html);
-
-      // Rewrite <a href>
-      $("a").each((i, el) => {
-        const href = $(el).attr("href");
-        if (href && !href.startsWith("javascript:")) {
-          try {
-            const abs = new URL(href, targetUrl).href;
-            $(el).attr("href", `/r/${encodeBase64Url(abs)}`);
-          } catch (e) {}
-        }
-      });
-
-      // Rewrite <form action>
-      $("form").each((i, el) => {
-        const action = $(el).attr("action");
-        if (action) {
-          try {
-            const abs = new URL(action, targetUrl).href;
-            $(el).attr("action", `/r/${encodeBase64Url(abs)}`);
-          } catch (e) {}
-        }
-      });
-
-      // Rewrite <iframe src>
-      $("iframe").each((i, el) => {
-        const src = $(el).attr("src");
-        if (src) {
-          try {
-            const abs = new URL(src, targetUrl).href;
-            $(el).attr("src", `/r/${encodeBase64Url(abs)}`);
-          } catch (e) {}
-        }
-      });
-
-      res.set("Content-Type", "text/html");
-      return res.send($.html());
-    }
-
-    // For other content types (CSS, JS, images, media)
-    targetResponse.body.pipe(res);
-    targetResponse.body.on("error", (err) => {
-      console.error("Stream error:", err);
-      res.sendStatus(500);
-    });
-  } catch (err) {
-    console.error("Proxy error:", err);
-    res.status(500).send("BlueProxy encountered an error.");
-  }
+  // Use http-proxy-middleware
+  createProxyMiddleware({
+    target: targetUrl,
+    changeOrigin: true,
+    selfHandleResponse: false, // Let the proxy handle streaming
+    secure: false,
+  })(req, res, next);
 });
 
 // Start server
