@@ -36,8 +36,8 @@ sudo apt install -y nodejs
 
 ```bash
 cd backend
-npm install cors
-npm install express http-proxy-middleware
+cd backend
+npm install express puppeteer
 npm install express node-fetch@3.3.2 cheerio
 npm install
 ```
