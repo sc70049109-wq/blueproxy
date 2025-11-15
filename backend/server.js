@@ -1,62 +1,64 @@
 // backend/server.js
+import express from "express";
+import { WebSocketServer } from "ws";
 import http from "http";
-import WebSocket, { WebSocketServer } from "ws";
 import pkg from "wrtc";
+const { RTCPeerConnection, RTCVideoSink, RTCVideoSource, RTCVideoFrame } = pkg;
 
-const { RTCPeerConnection, nonstandard: { RTCVideoSource, RTCVideoFrame } } = pkg;
+const app = express();
+const server = http.createServer(app);
 
-const HTTP_PORT = 3000;
-const WS_PORT = 3001;
-
-// Simple HTTP server (optional, can serve frontend if needed)
-const server = http.createServer((req, res) => {
-  res.writeHead(200);
-  res.end("BlueProxy Backend is running");
-});
-
-server.listen(HTTP_PORT, () => {
-  console.log(`HTTP server running on http://localhost:${HTTP_PORT}`);
+// HTTP server
+const PORT_HTTP = 3000;
+server.listen(PORT_HTTP, () => {
+  console.log(`HTTP server running on http://localhost:${PORT_HTTP}`);
 });
 
 // WebSocket server
-const wss = new WebSocketServer({ port: WS_PORT });
-console.log(`WebSocket server running on ws://localhost:${WS_PORT}`);
+const PORT_WS = 3001;
+const wss = new WebSocketServer({ server, port: PORT_WS });
+console.log(`WebSocket server running on ws://localhost:${PORT_WS}`);
 
 wss.on("connection", (ws) => {
   console.log("Client connected via WebSocket");
 
-  // Create WebRTC PeerConnection
+  // Create WebRTC peer connection
   const pc = new RTCPeerConnection();
 
-  // Create a video track with a placeholder black frame
+  // Optional: Video source for streaming dummy video or real frames
   const videoSource = new RTCVideoSource();
-  const videoTrack = videoSource.createTrack();
-  pc.addTrack(videoTrack);
+  const track = videoSource.createTrack();
+  pc.addTrack(track);
 
-  // Generate a simple black frame every 40ms (~25fps)
-  const width = 640;
-  const height = 480;
-  const frameData = new Uint8ClampedArray(width * height * 4); // all 0 = black
-  const sendFrame = () => {
-    const frame = new RTCVideoFrame(frameData, width, height);
-    videoSource.onFrame(frame);
-  };
-  const interval = setInterval(sendFrame, 40);
-
+  // Handle ICE candidates from the peer
   pc.onicecandidate = ({ candidate }) => {
-    if (candidate) {
-      ws.send(JSON.stringify({ type: "ice", candidate }));
-    }
+    if (candidate) ws.send(JSON.stringify({ type: "ice", candidate }));
   };
 
-  ws.onmessage = async (msg) => {
-    const data = JSON.parse(msg.toString());
+  // Receive remote track (video from client)
+  pc.ontrack = (event) => {
+    console.log("Received remote track:", event.streams);
+  };
+
+  // Safe message parsing
+  ws.on("message", async (message) => {
+    let data;
+    try {
+      if (typeof message === "string") {
+        data = JSON.parse(message);
+      } else {
+        data = message; // already object
+      }
+    } catch (err) {
+      console.error("Failed to parse message:", message, err);
+      return;
+    }
 
     if (data.type === "offer") {
       await pc.setRemoteDescription(data);
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      ws.send(JSON.stringify(pc.localDescription));
+      ws.send(JSON.stringify(answer));
     } else if (data.type === "ice") {
       try {
         await pc.addIceCandidate(data.candidate);
@@ -64,11 +66,10 @@ wss.on("connection", (ws) => {
         console.error("Error adding ICE candidate:", err);
       }
     }
-  };
+  });
 
   ws.on("close", () => {
-    clearInterval(interval);
-    pc.close();
     console.log("Client disconnected");
+    pc.close();
   });
 });
