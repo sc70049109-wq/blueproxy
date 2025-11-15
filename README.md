@@ -37,8 +37,8 @@ sudo apt install -y libnss3 libxss1 ffmpeg alsa-utils pulseaudio libasound2-plug
 Clone this repo and install dependencies:
 
 ```bash
-git clone https://github.com/sc70049109-wq/BlueProxy
-cd BlueProxy
+git clone https://github.com/sc70049109-wq/blueproxy
+cd blueproxy
 
 # Initialize package.json if not present
 npm init -y
