@@ -1,35 +1,77 @@
 // backend/server.js
-import express from "express";
-import { WebSocketServer } from "ws";
+import http from "http";
+import WebSocket, { WebSocketServer } from "ws";
+import { RTCPeerConnection, nonstandard } from "wrtc";
 
-const app = express();
-const HTTP_PORT = 3000;
-const WS_PORT = 3001;
+const { RTCVideoSource, RTCVideoFrame } = nonstandard;
 
-// Serve static files if needed
-app.use(express.static("../frontend/dist"));
-
-// Start HTTP server
-app.listen(HTTP_PORT, () => {
-  console.log(`HTTP server running on http://localhost:${HTTP_PORT}`);
+// HTTP server (just for info, not serving files)
+const server = http.createServer((req, res) => {
+  res.writeHead(200);
+  res.end("BlueProxy WebRTC Backend Running");
 });
 
-// Start WebSocket server on its own port
-const wss = new WebSocketServer({ port: WS_PORT });
-console.log(`WebSocket server running on ws://localhost:${WS_PORT}`);
+server.listen(3000, () => {
+  console.log("HTTP server running on http://localhost:3000");
+});
 
-// Handle WebSocket connections
+// WebSocket server for signaling
+const wss = new WebSocketServer({ port: 3001 });
+console.log("WebSocket server running on ws://localhost:3001");
+
 wss.on("connection", (ws) => {
   console.log("Client connected via WebSocket");
 
-  ws.on("message", (message) => {
-    console.log("Received:", message.toString());
+  // Create a new peer connection per client
+  const pc = new RTCPeerConnection();
 
-    // Echo back for testing
-    ws.send(JSON.stringify({ echo: message.toString() }));
+  // Create a virtual video source
+  const videoSource = new RTCVideoSource();
+  const track = videoSource.createTrack();
+  pc.addTrack(track);
+
+  // Send fake frames at 30fps
+  const width = 640;
+  const height = 480;
+  const frameInterval = setInterval(() => {
+    const data = new Uint8ClampedArray(width * height * 4); // black frame
+    videoSource.onFrame(new RTCVideoFrame(data, width, height));
+  }, 1000 / 30);
+
+  // Handle ICE candidates
+  pc.onicecandidate = ({ candidate }) => {
+    if (candidate) {
+      ws.send(JSON.stringify({ type: "ice", candidate }));
+    }
+  };
+
+  // Handle messages from client
+  ws.on("message", async (msg) => {
+    let data;
+    try {
+      data = JSON.parse(msg.toString());
+    } catch (err) {
+      console.error("Invalid JSON:", msg.toString());
+      return;
+    }
+
+    if (data.type === "offer") {
+      await pc.setRemoteDescription(data);
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      ws.send(JSON.stringify(pc.localDescription));
+    } else if (data.type === "ice") {
+      try {
+        await pc.addIceCandidate(data.candidate);
+      } catch (err) {
+        console.error("Error adding ICE candidate:", err);
+      }
+    }
   });
 
   ws.on("close", () => {
     console.log("Client disconnected");
+    clearInterval(frameInterval);
+    pc.close();
   });
 });
