@@ -1,14 +1,57 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import Particles from "react-tsparticles";
 import { loadFull } from "tsparticles";
 
 export default function App() {
   const videoRef = useRef(null);
+  const wsRef = useRef(null);
+  const pcRef = useRef(null);
 
-  // Initialize particles
   const particlesInit = async (engine) => {
     await loadFull(engine);
   };
+
+  useEffect(() => {
+    const ws = new WebSocket("ws://localhost:3001");
+    wsRef.current = ws;
+
+    const pc = new RTCPeerConnection();
+    pcRef.current = pc;
+
+    pc.ontrack = (event) => {
+      videoRef.current.srcObject = event.streams[0];
+    };
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        ws.send(JSON.stringify({ type: "candidate", candidate: event.candidate }));
+      }
+    };
+
+    ws.onmessage = async (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.type === "answer") {
+        await pc.setRemoteDescription(data.answer);
+      }
+
+      if (data.type === "candidate") {
+        try {
+          await pc.addIceCandidate(data.candidate);
+        } catch (e) {
+          console.error("Error adding candidate", e);
+        }
+      }
+    };
+
+    const initWebRTC = async () => {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      ws.send(JSON.stringify({ type: "offer", offer }));
+    };
+
+    initWebRTC();
+  }, []);
 
   return (
     <div
@@ -21,7 +64,6 @@ export default function App() {
         paddingTop: "20px",
       }}
     >
-      {/* Moving Particles */}
       <Particles
         id="tsparticles"
         init={particlesInit}
@@ -29,19 +71,17 @@ export default function App() {
           background: { color: { value: "transparent" } },
           fpsLimit: 60,
           particles: {
+            number: { value: 50 },
             color: { value: "#ffffff" },
             links: { enable: true, color: "#ffffff" },
             move: { enable: true, speed: 2 },
-            number: { value: 50 },
             size: { value: 3 },
           },
         }}
       />
 
-      {/* Header */}
       <h1 style={{ textAlign: "center" }}>🌐 BlueProxy WebRTC</h1>
 
-      {/* Video Placeholder */}
       <div style={{ display: "flex", justifyContent: "center", marginTop: "50px" }}>
         <video
           ref={videoRef}
@@ -59,7 +99,6 @@ export default function App() {
         />
       </div>
 
-      {/* Cards / Images Section */}
       <div
         style={{
           display: "flex",
@@ -76,4 +115,3 @@ export default function App() {
     </div>
   );
 }
-
