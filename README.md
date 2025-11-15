@@ -48,7 +48,7 @@ npm install node-pre-gyp --save-dev
 
 # Install backend dependencies
 npm install express ws puppeteer wrtc
-
+npm install node-fetch
 # Install frontend dependencies
 npm install react react-dom vite
 npm install react-tsparticles@latest tsparticles@latest
