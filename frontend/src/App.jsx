@@ -1,34 +1,32 @@
 // frontend/src/App.jsx
 import React, { useRef, useEffect } from "react";
-import Particles from "react-tsparticles";
-import { loadFull } from "tsparticles";
+import Particles from "@tsparticles/react";
+import { loadFull } from "@tsparticles/engine";
 
 export default function App() {
   const videoRef = useRef(null);
   const wsRef = useRef(null);
   const pcRef = useRef(null);
 
-  // Initialize particles
+  // Initialize particles engine
   const particlesInit = async (engine) => {
     await loadFull(engine);
   };
 
   useEffect(() => {
-    // Connect to WebSocket backend
+    // Connect to backend WebSocket
     const ws = new WebSocket("ws://localhost:3001");
     wsRef.current = ws;
 
     const pc = new RTCPeerConnection();
     pcRef.current = pc;
 
-    // Display remote tracks
     pc.ontrack = (event) => {
       if (videoRef.current) {
         videoRef.current.srcObject = event.streams[0];
       }
     };
 
-    // Send ICE candidates to server
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) {
         ws.send(JSON.stringify({ type: "ice", candidate }));
@@ -36,12 +34,11 @@ export default function App() {
     };
 
     ws.onopen = async () => {
-      console.log("WebSocket connected to backend");
+      console.log("WebSocket connected");
 
-      // Create data channel (optional)
+      // Optional data channel
       pc.createDataChannel("blueproxy");
 
-      // Create offer
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       ws.send(JSON.stringify(offer));
@@ -69,14 +66,12 @@ export default function App() {
 
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
-      {/* Particles Background */}
+      {/* Particles background */}
       <Particles
         id="tsparticles"
         init={particlesInit}
         options={{
-          background: {
-            color: { value: "#0f0f0f" },
-          },
+          background: { color: { value: "#0f0f0f" } },
           fpsLimit: 60,
           interactivity: {
             events: {
@@ -100,7 +95,7 @@ export default function App() {
         style={{ position: "absolute", top: 0, left: 0 }}
       />
 
-      {/* WebRTC Video */}
+      {/* WebRTC video */}
       <video
         ref={videoRef}
         autoPlay
