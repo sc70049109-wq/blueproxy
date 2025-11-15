@@ -24,6 +24,8 @@ Before running the project, make sure you have:
 ```bash
 sudo apt update
 sudo apt install -y libnss3 libxss1 ffmpeg alsa-utils pulseaudio libasound2-plugins
+sudo apt update
+sudo apt install -y build-essential python3 libnss3 libxss1 libasound2-dev libatk1.0-0 libatk-bridge2.0-0 libcups2 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 libgbm-dev
 ```
 
 ### **Windows**
