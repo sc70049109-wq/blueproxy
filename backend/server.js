@@ -1,7 +1,7 @@
 // backend/server.js
 import express from "express";
 import fetch from "node-fetch";
-import cheerio from "cheerio";
+import { load } from "cheerio"; // Fixed Cheerio import
 
 const app = express();
 const PORT = 8080;
@@ -33,7 +33,7 @@ app.get("/r/:b64(*)", async (req, res) => {
     // HTML content: rewrite links/forms/iframes
     if (contentType.includes("text/html")) {
       let html = await targetResponse.text();
-      const $ = cheerio.load(html);
+      const $ = load(html);
 
       // Rewrite <a href>
       $("a").each((i, el) => {
