@@ -1,15 +1,21 @@
 // frontend/src/App.jsx
-import React, { useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import Particles from "react-tsparticles";
 import { loadFull } from "tsparticles";
 
 export default function App() {
   const videoRef = useRef(null);
 
-  // Minimal particles init
+  // Initialize particles
   const particlesInit = async (engine) => {
     await loadFull(engine);
   };
+
+  // Placeholder WebRTC setup (optional, won't break the UI)
+  useEffect(() => {
+    // WebSocket / WebRTC logic can go here later
+    // For now, just a placeholder to avoid breaking the video element
+  }, []);
 
   return (
     <div
@@ -22,7 +28,7 @@ export default function App() {
         paddingTop: "20px",
       }}
     >
-      {/* Particles */}
+      {/* Moving Particles */}
       <Particles
         id="tsparticles"
         init={particlesInit}
@@ -60,7 +66,7 @@ export default function App() {
         />
       </div>
 
-      {/* Cards / Images */}
+      {/* Cards / Images Section */}
       <div
         style={{
           display: "flex",
