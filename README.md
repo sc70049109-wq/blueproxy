@@ -36,6 +36,8 @@ sudo apt install -y nodejs
 
 ```bash
 cd backend
+cd backend
+npm install express node-fetch@3.3.2 cheerio
 npm install
 ```
 
