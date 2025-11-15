@@ -44,7 +44,7 @@ cd blueproxy-webrtc
 npm init -y
 
 # Install backend dependencies
-npm install express ws puppeteer
+npm install express ws puppeteer wrtc
 
 # Install frontend dependencies
 npm install react react-dom vite
