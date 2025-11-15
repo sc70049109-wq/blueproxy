@@ -1,45 +1,12 @@
-// src/App.jsx
-import React, { useEffect, useRef } from "react";
+// frontend/src/App.jsx
+import React, { useRef } from "react";
 import Particles from "react-tsparticles";
 import { loadFull } from "tsparticles";
 
 export default function App() {
   const videoRef = useRef(null);
-  let pc;
-  let ws;
 
-  // Initialize WebSocket and WebRTC safely
-  useEffect(() => {
-    ws = new WebSocket("ws://localhost:3000");
-
-    ws.onopen = () => {
-      console.log("WebSocket connected");
-
-      // Initialize WebRTC after WS opens
-      initWebRTC();
-    };
-
-    ws.onmessage = async (msg) => {
-      const data = JSON.parse(msg.data);
-      if (data.type === "answer") {
-        await pc.setRemoteDescription(data.answer);
-      }
-    };
-
-    pc = new RTCPeerConnection();
-
-    pc.ontrack = (event) => {
-      videoRef.current.srcObject = event.streams[0];
-    };
-
-    const initWebRTC = async () => {
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      ws.send(JSON.stringify({ type: "offer", offer }));
-    };
-  }, []);
-
-  // Initialize particles
+  // Minimal particles init
   const particlesInit = async (engine) => {
     await loadFull(engine);
   };
@@ -51,6 +18,8 @@ export default function App() {
         background: "linear-gradient(135deg, #1a1a1a, #0d0d0d)",
         color: "white",
         overflow: "hidden",
+        position: "relative",
+        paddingTop: "20px",
       }}
     >
       {/* Particles */}
@@ -71,26 +40,27 @@ export default function App() {
       />
 
       {/* Header */}
-      <h1 style={{ textAlign: "center", paddingTop: "20px" }}>
-        🌐 BlueProxy WebRTC
-      </h1>
+      <h1 style={{ textAlign: "center" }}>🌐 BlueProxy WebRTC</h1>
 
-      {/* Video Stream */}
+      {/* Video Placeholder */}
       <div style={{ display: "flex", justifyContent: "center", marginTop: "50px" }}>
         <video
           ref={videoRef}
-          autoPlay
-          playsInline
           style={{
             width: "80%",
+            maxHeight: "400px",
             borderRadius: "20px",
             boxShadow: "0 0 20px rgba(0,0,0,0.5)",
-            backgroundColor: "#000", // placeholder black
+            background: "linear-gradient(90deg, #222, #111)",
+            objectFit: "cover",
           }}
+          autoPlay
+          playsInline
+          muted
         />
       </div>
 
-      {/* Cards / Images Example */}
+      {/* Cards / Images */}
       <div
         style={{
           display: "flex",
@@ -100,9 +70,9 @@ export default function App() {
           gap: "20px",
         }}
       >
-        <div style={{ width: "150px", height: "150px", background: "#333", borderRadius: "15px" }}></div>
-        <div style={{ width: "150px", height: "150px", background: "#444", borderRadius: "15px" }}></div>
-        <div style={{ width: "150px", height: "150px", background: "#555", borderRadius: "15px" }}></div>
+        <div style={{ width: "150px", height: "150px", background: "#333", borderRadius: "15px" }} />
+        <div style={{ width: "150px", height: "150px", background: "#444", borderRadius: "15px" }} />
+        <div style={{ width: "150px", height: "150px", background: "#555", borderRadius: "15px" }} />
       </div>
     </div>
   );
