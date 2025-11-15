@@ -10,11 +10,11 @@ export default function App() {
 
   // Initialize particles engine
   const particlesInit = async (engine) => {
-    await loadFull(engine); // this is correct for the latest tsparticles
+    await loadFull(engine);
   };
 
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:3001");
+    const ws = new WebSocket("ws://localhost:3001"); // must match backend
     wsRef.current = ws;
 
     const pc = new RTCPeerConnection();
@@ -32,10 +32,7 @@ export default function App() {
 
     ws.onopen = async () => {
       console.log("WebSocket connected");
-
-      // Optional data channel
       pc.createDataChannel("blueproxy");
-
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       ws.send(JSON.stringify(offer));
@@ -43,8 +40,10 @@ export default function App() {
 
     ws.onmessage = async (message) => {
       const data = JSON.parse(message.data);
-      if (data.type === "answer") await pc.setRemoteDescription(data);
-      else if (data.type === "ice") {
+
+      if (data.type === "answer") {
+        await pc.setRemoteDescription(data);
+      } else if (data.type === "ice") {
         try {
           await pc.addIceCandidate(data.candidate);
         } catch (err) {
@@ -61,6 +60,7 @@ export default function App() {
 
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
+      {/* Particles background */}
       <Particles
         id="tsparticles"
         init={particlesInit}
@@ -89,6 +89,7 @@ export default function App() {
         style={{ position: "absolute", top: 0, left: 0 }}
       />
 
+      {/* WebRTC video */}
       <video
         ref={videoRef}
         autoPlay
