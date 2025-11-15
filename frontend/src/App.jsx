@@ -1,21 +1,19 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 
-const PROXY_BASE = "http://localhost:8080/r/";
+const PROXY_BASE = "http://localhost:8080/r?url=";
 
 function App() {
   const [inputUrl, setInputUrl] = useState("");
   const [proxiedUrl, setProxiedUrl] = useState("");
-  const iframeRef = useRef();
 
   const goToUrl = (url) => {
     if (!url.startsWith("http")) {
       url = `https://duckduckgo.com/?q=${encodeURIComponent(url)}`;
     }
-    const proxied = `${PROXY_BASE}${encodeURIComponent(url)}`;
-    setProxiedUrl(proxied);
+    setProxiedUrl(`${PROXY_BASE}${encodeURIComponent(url)}`);
   };
 
-  // Particle effect
+  // Particle background
   useEffect(() => {
     const canvas = document.getElementById("particles");
     if (!canvas) return;
@@ -63,12 +61,10 @@ function App() {
     <div className="relative h-screen w-screen overflow-hidden font-sans">
       {/* Background gradient */}
       <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-blue-300 to-blue-700"></div>
-      {/* Particle canvas */}
       <canvas id="particles" className="absolute top-0 left-0 w-full h-full"></canvas>
 
       {proxiedUrl ? (
         <iframe
-          ref={iframeRef}
           src={proxiedUrl}
           title="BlueProxy"
           className="relative z-10 w-full h-full border-none"
