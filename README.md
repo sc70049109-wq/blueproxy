@@ -23,7 +23,7 @@ Before running the project, make sure you have:
 ### **Ubuntu / Debian**
 ```bash
 sudo apt update
-sudo apt install -y wget curl ffmpeg libnss3 libxss1 libasound2
+sudo apt install -y libnss3 libxss1 ffmpeg alsa-utils pulseaudio libasound2-plugins
 ```
 
 ### **Windows**
