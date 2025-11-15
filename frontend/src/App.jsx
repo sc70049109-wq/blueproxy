@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useCallback } from "react";
 import Particles from "@tsparticles/react";
 import { loadFull } from "tsparticles";
 
@@ -9,9 +9,9 @@ export default function App() {
   const pcRef = useRef(null);
 
   // Initialize particles engine
-  const particlesInit = async (engine) => {
+  const particlesInit = useCallback(async (engine) => {
     await loadFull(engine);
-  };
+  }, []);
 
   useEffect(() => {
     // Connect to backend WebSocket
@@ -21,14 +21,14 @@ export default function App() {
     const pc = new RTCPeerConnection();
     pcRef.current = pc;
 
-    // Display incoming video track
+    // Set the incoming video stream
     pc.ontrack = (event) => {
       if (videoRef.current) {
         videoRef.current.srcObject = event.streams[0];
       }
     };
 
-    // Send ICE candidates to server
+    // Send ICE candidates to backend
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) {
         ws.send(JSON.stringify({ type: "ice", candidate }));
@@ -41,23 +41,29 @@ export default function App() {
       // Optional data channel
       pc.createDataChannel("blueproxy");
 
-      // Create offer and send to server
+      // Create and send offer
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       ws.send(JSON.stringify(offer));
     };
 
-    ws.onmessage = async (event) => {
+    ws.onmessage = async (message) => {
+      let data;
       try {
-        const data = JSON.parse(event.data);
-
-        if (data.type === "answer") {
-          await pc.setRemoteDescription(data);
-        } else if (data.type === "ice") {
-          await pc.addIceCandidate(data.candidate);
-        }
+        data = JSON.parse(message.data);
       } catch (err) {
-        console.error("Invalid message received:", event.data, err);
+        console.error("Invalid JSON received:", message.data);
+        return;
+      }
+
+      if (data.type === "answer") {
+        await pc.setRemoteDescription(data);
+      } else if (data.type === "ice") {
+        try {
+          await pc.addIceCandidate(data.candidate);
+        } catch (err) {
+          console.error("Error adding ICE candidate:", err);
+        }
       }
     };
 
