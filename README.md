@@ -56,6 +56,7 @@ npm install react react-dom vite
 
 ### **1. Start the Backend**
 ```bash
+cd backend
 node server.js
 ```
 
@@ -68,6 +69,7 @@ This will:
 
 ### **2. Start the Frontend**
 ```bash
+cd frontend
 npx vite
 ```
 
