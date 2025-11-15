@@ -1,13 +1,14 @@
 {
   "name": "blueproxy-backend",
   "version": "1.0.0",
+  "type": "module",
   "main": "server.js",
-  "scripts": {"start": "node server.js"},
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
     "express": "^4.18.2",
-    "node-fetch": "^3.4.1",
-    "cheerio": "^1.0.0-rc.12",
-    "stream": "^0.0.2"
-  },
-  "type": "module"
+    "ws": "^8.13.0",
+    "wrtc": "^0.4.8"
+  }
 }
