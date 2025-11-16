@@ -1,18 +1,20 @@
+// src/App.jsx
 import React, { useRef, useEffect } from "react";
 import Particles from "@tsparticles/react";
-import { loadFull } from "@tsparticles/engine";
+import { loadFull } from "tsparticles";
 
 export default function App() {
   const videoRef = useRef(null);
   const wsRef = useRef(null);
   const pcRef = useRef(null);
 
-  // tsParticles init
+  // Initialize particles engine
   const particlesInit = async (engine) => {
     await loadFull(engine);
   };
 
   useEffect(() => {
+    // Connect to backend WebSocket
     const ws = new WebSocket("ws://localhost:3001");
     wsRef.current = ws;
 
@@ -20,11 +22,15 @@ export default function App() {
     pcRef.current = pc;
 
     pc.ontrack = (event) => {
-      if (videoRef.current) videoRef.current.srcObject = event.streams[0];
+      if (videoRef.current) {
+        videoRef.current.srcObject = event.streams[0];
+      }
     };
 
     pc.onicecandidate = ({ candidate }) => {
-      if (candidate) ws.send(JSON.stringify({ type: "ice", candidate }));
+      if (candidate) {
+        ws.send(JSON.stringify({ type: "ice", candidate }));
+      }
     };
 
     ws.onopen = async () => {
@@ -38,10 +44,13 @@ export default function App() {
     ws.onmessage = async (message) => {
       try {
         const data = JSON.parse(message.data);
-        if (data.type === "answer") await pc.setRemoteDescription(data);
-        else if (data.type === "ice") await pc.addIceCandidate(data.candidate);
+        if (data.type === "answer") {
+          await pc.setRemoteDescription(data);
+        } else if (data.type === "ice") {
+          await pc.addIceCandidate(data.candidate);
+        }
       } catch (err) {
-        console.error("Invalid JSON from WebSocket:", message.data);
+        console.error("Failed to parse WS message:", message.data, err);
       }
     };
 
@@ -52,13 +61,12 @@ export default function App() {
   }, []);
 
   return (
-    <div style={{ width: "100vw", height: "100vh", position: "relative", overflow: "hidden" }}>
-      {/* Particles Background */}
+    <div style={{ width: "100vw", height: "100vh", position: "relative", background: "#0f0f0f" }}>
+      {/* Particles background */}
       <Particles
         id="tsparticles"
         init={particlesInit}
         options={{
-          background: { color: { value: "#0f0f0f" } },
           fpsLimit: 60,
           interactivity: {
             events: {
@@ -79,31 +87,44 @@ export default function App() {
           },
           detectRetina: true,
         }}
-        style={{ position: "absolute", top: 0, left: 0 }}
+        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
       />
 
       {/* Title */}
-      <h1 style={{ position: "absolute", top: "20px", left: "50%", transform: "translateX(-50%)", color: "#00f", fontSize: "2rem" }}>
+      <h1
+        style={{
+          position: "absolute",
+          top: "5%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          color: "#00f",
+          fontSize: "2.5rem",
+          fontWeight: "bold",
+          textShadow: "0 0 10px #00f",
+        }}
+      >
         Blue Proxy
       </h1>
 
-      {/* Search Bar */}
+      {/* Search bar */}
       <input
         type="text"
         placeholder="Search..."
         style={{
           position: "absolute",
-          top: "70px",
+          top: "15%",
           left: "50%",
           transform: "translateX(-50%)",
           padding: "10px 20px",
-          borderRadius: "8px",
+          borderRadius: "12px",
           border: "none",
           outline: "none",
+          width: "300px",
+          boxShadow: "0 0 15px rgba(0,0,255,0.5)",
         }}
       />
 
-      {/* Video */}
+      {/* WebRTC video */}
       <video
         ref={videoRef}
         autoPlay
